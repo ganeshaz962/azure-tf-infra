@@ -1,37 +1,29 @@
-name: Deploy Terraform
+name: Terraform Deploy
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      terraform_folder:
-        description: 'Terraform folder to deploy (e.g., hub/prod)'
-        required: true
-        type: string
       apply:
-        description: 'Whether to apply terraform changes'
-        required: false
         type: boolean
+        description: Should terraform apply also run?
+        required: false
         default: false
-      environment:
-        description: 'GitHub environment for approval'
-        required: false
-        type: string
-    secrets:
-      AZURE_CLIENT_ID:
-        description: 'Azure Client ID'
-        required: true
-      AZURE_CLIENT_SECRET:
-        description: 'Azure Client Secret'
-        required: true
-      AZURE_TENANT_ID:
-        description: 'Azure Tenant ID'
-        required: false
-      AZURE_SUBSCRIPTION_ID:
-        description: 'Azure Subscription ID'
-        required: false
+  push:
+    branches:
+      - main
+    paths:
+      - 'hub/prod/**'
+      - 'hub/modules/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'hub/prod/**'
+      - 'hub/modules/**'
 
 env:
   TERRAFORM_VERSION: 1.5.0
+  TERRAFORM_FOLDER: hub/prod
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -39,7 +31,7 @@ env:
 
 jobs:
   terraform-plan:
-    name: Terraform Plan - ${{ inputs.terraform_folder }}
+    name: Terraform Plan
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -62,34 +54,33 @@ jobs:
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Initialize Terraform
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform init
 
       - name: Format Check
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform fmt -check -recursive
 
       - name: Validate Terraform
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform validate
 
       - name: Plan Terraform
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform plan -out=tfplan
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ inputs.terraform_folder }}
-          path: ./${{ inputs.terraform_folder }}/tfplan
+          name: tfplan-${{ env.TERRAFORM_FOLDER }}
+          path: ./${{ env.TERRAFORM_FOLDER }}/tfplan
           retention-days: 5
 
   terraform-apply:
-    name: Terraform Apply - ${{ inputs.terraform_folder }}
+    name: Terraform Apply
     runs-on: ubuntu-latest
     needs: terraform-plan
-    if: inputs.apply == true
-    environment: ${{ inputs.environment }}
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event.inputs.apply == 'true')
     permissions:
       contents: read
     steps:
@@ -113,20 +104,20 @@ jobs:
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ inputs.terraform_folder }}
-          path: ./${{ inputs.terraform_folder }}
+          name: tfplan-${{ env.TERRAFORM_FOLDER }}
+          path: ./${{ env.TERRAFORM_FOLDER }}
 
       - name: Initialize Terraform
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform init
 
       - name: Apply Terraform
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform apply -auto-approve tfplan
 
       - name: Get Terraform Outputs
         id: tf_outputs
-        working-directory: ./${{ inputs.terraform_folder }}
+        working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: |
           echo "vnet_id=$(terraform output -raw vnet_id)" >> $GITHUB_OUTPUT
           echo "app_gateway_ip=$(terraform output -raw app_gateway_public_ip)" >> $GITHUB_OUTPUT
@@ -135,7 +126,7 @@ jobs:
       - name: Create Deployment Summary
         run: |
           echo "## Terraform Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Folder:** ${{ inputs.terraform_folder }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Folder:** ${{ env.TERRAFORM_FOLDER }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Resources Deployed:" >> $GITHUB_STEP_SUMMARY
           echo "- **Virtual Network ID:** ${{ steps.tf_outputs.outputs.vnet_id }}" >> $GITHUB_STEP_SUMMARY
