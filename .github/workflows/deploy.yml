@@ -1,153 +1,172 @@
-name: Deploy Infrastructure
+name: Deploy Terraform
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        required: true
+      environment:
+        type: string
+        required: true
+      terraform_folder:
+        type: string
+        required: true
+      runs_on:
+        type: string
+        required: false
+        default: ubuntu-latest
+      terraform_version:
+        type: string
+        required: false
+        default: 1.7.0
+      apply:
+        type: boolean
+        default: false
+      terraform_destroy:
+        type: boolean
+        default: false
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_CLIENT_SECRET:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
 
 env:
   ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  TF_VERSION: 1.7.0
 
 jobs:
-  # Plan job - runs on PR and push to main
-  terraform-plan:
-    name: Plan - ${{ matrix.env }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        env: [prod, uat]
-    
+  plan:
+    name: Terraform Plan
+    runs-on: ${{ inputs.runs_on }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.terraform_folder }}
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-          terraform_wrapper: false
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
 
-      - name: Terraform Init
-        working-directory: ./hub/${{ matrix.env }}
-        run: terraform init
+    - name: Terraform Init
+      run: |
+        terraform init -input=false
+        terraform --version
 
-      - name: Terraform Format Check
-        working-directory: ./hub/${{ matrix.env }}
-        run: terraform fmt -check
-        continue-on-error: true
+    - name: Terraform Format Check
+      run: terraform fmt -check
+      continue-on-error: true
 
-      - name: Terraform Validate
-        working-directory: ./hub/${{ matrix.env }}
-        run: terraform validate
+    - name: Terraform Validate
+      run: terraform validate
 
-      - name: Terraform Plan
-        id: plan
-        working-directory: ./hub/${{ matrix.env }}
-        run: |
-          terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt
+    - name: Terraform Plan
+      if: ${{ ! inputs.terraform_destroy }}
+      run: terraform plan -input=false -out "terraform.plan" -no-color | tee plan.txt
 
-      - name: Post Plan to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('./hub/${{ matrix.env }}/plan.txt', 'utf8');
-            const maxLength = 65000;
-            const truncatedPlan = plan.length > maxLength ? plan.substring(0, maxLength) + '\n\n... (truncated)' : plan;
-            
-            const output = `## 📋 Terraform Plan - \`${{ matrix.env }}\`
-            
-            <details>
-            <summary>Click to view plan</summary>
-            
-            \`\`\`terraform
-            ${truncatedPlan}
-            \`\`\`
-            
-            </details>
-            `;
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
+    - name: Terraform Destroy Plan
+      if: ${{ inputs.terraform_destroy }}
+      run: terraform plan -destroy -input=false -out "terraform.plan" -no-color | tee plan.txt
 
-      - name: Upload Plan
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ matrix.env }}
-          path: ./hub/${{ matrix.env }}/tfplan
-          retention-days: 5
+    - name: Show Terraform Plan
+      run: terraform show terraform.plan
 
-  # Apply job - only runs on push to main, after approval
-  terraform-apply-prod:
-    name: Apply - prod
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment:
-      name: prod
-    
+    - name: Post Plan to PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const plan = fs.readFileSync('${{ inputs.terraform_folder }}/plan.txt', 'utf8');
+          const maxLength = 65000;
+          const truncatedPlan = plan.length > maxLength ? plan.substring(0, maxLength) + '\n\n... (truncated)' : plan;
+          
+          const output = `## 📋 Terraform Plan - \`${{ inputs.name }}\`
+          
+          <details>
+          <summary>Click to view plan</summary>
+          
+          \`\`\`terraform
+          ${truncatedPlan}
+          \`\`\`
+          
+          </details>
+          
+          **Environment:** ${{ inputs.environment }}
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          });
+
+    - name: Copy current folder for archiving
+      if: ${{ inputs.apply }}
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        mkdir -p ~/artifacts
+        tar -czpf ~/artifacts/terraform.tar.gz .
+
+    - name: Upload Plan Artifact
+      if: ${{ inputs.apply }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.name }}-plan-${{ github.run_id }}
+        path: ~/artifacts/terraform.tar.gz
+        retention-days: 1
+        if-no-files-found: error
+
+  approve:
+    name: Await Approval
+    needs: plan
+    if: ${{ inputs.apply }}
+    environment: ${{ inputs.environment }}
+    runs-on: ${{ inputs.runs_on }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - run: echo "✅ Plan was approved for ${{ inputs.environment }}"
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
+  apply:
+    name: Terraform Apply
+    needs: approve
+    runs-on: ${{ inputs.runs_on }}
 
-      - name: Terraform Init
-        working-directory: ./hub/prod
-        run: terraform init
+    defaults:
+      run:
+        shell: bash
 
-      - name: Download Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-prod
-          path: ./hub/prod
-
-      - name: Terraform Apply
-        working-directory: ./hub/prod
-        run: terraform apply -auto-approve tfplan
-
-  terraform-apply-uat:
-    name: Apply - uat
-    runs-on: ubuntu-latest
-    needs: terraform-plan
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment:
-      name: uat
-    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.name }}-plan-${{ github.run_id }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
+    - name: Extract artifact
+      run: tar -xzf terraform.tar.gz
 
-      - name: Terraform Init
-        working-directory: ./hub/uat
-        run: terraform init
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
 
-      - name: Download Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-uat
-          path: ./hub/uat
+    - name: Terraform Apply
+      run: terraform apply -input=false -auto-approve "terraform.plan"
+      working-directory: ${{ inputs.terraform_folder }}
 
-      - name: Terraform Apply
-        working-directory: ./hub/uat
-        run: terraform apply -auto-approve tfplan
+    - name: Terraform Output
+      run: terraform output -json
+      working-directory: ${{ inputs.terraform_folder }}
+      continue-on-error: true

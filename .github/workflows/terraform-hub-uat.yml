@@ -1,0 +1,38 @@
+name: Terraform Hub - UAT
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        type: boolean
+        description: Should terraform apply also run?
+        required: false
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'hub/uat/**'
+      - 'hub/module/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'hub/uat/**'
+      - 'hub/module/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-hub-uat:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      name: "hub-uat"
+      environment: "uat"
+      terraform_folder: hub/uat
+      apply: ${{ (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event.inputs.apply == 'true') }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

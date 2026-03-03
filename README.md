@@ -31,41 +31,42 @@ Done! You're ready to deploy.
 
 ## How It Works
 
-### Simple 2-Step Approval Process
+### Workflow Structure
 
-**Step 1: Pull Request (Review Changes)**
-```
-1. Create branch and make changes
-2. Push and create PR
-3. Terraform plan runs automatically
-4. Review plan in PR comments
-5. Approve and merge PR
-```
+**Reusable Workflow:** [deploy.yml](.github/workflows/deploy.yml)
+- Contains terraform plan/approve/apply logic
+- Called by environment-specific workflows
 
-**Step 2: Deployment (Approve Apply)**
-```
-1. After merge, workflow runs
-2. Terraform plan runs for prod and uat
-3. Go to Actions tab → Click workflow
-4. Click "Review deployments"
-5. Select prod/uat and approve
-6. Resources get created/updated
-```
+**Environment Workflows:**
+- [terraform-hub-prod.yml](.github/workflows/terraform-hub-prod.yml) - Production
+- [terraform-hub-uat.yml](.github/workflows/terraform-hub-uat.yml) - UAT
 
-### What Happens When?
+### Triggers
 
-**On PR:** 
-- Terraform plan only (no changes to Azure)
-- Plan results posted as comment
-
-**On merge to main:**
+**On Pull Request:**
 - Terraform plan runs
-- Waits for your approval
-- After approval: terraform apply creates resources
+- Plan posted as PR comment
+- No approval needed
 
-**For both environments:**
-- First deployment: Approve both prod and uat
-- Future changes: Approve only what changed
+**On Push to Main:**
+- Only runs if files in that environment changed
+- Terraform plan → Waits for approval → Terraform apply
+
+**Manual Trigger:**
+- Go to Actions → Select workflow → Run workflow
+- Choose whether to apply changes
+
+### Approval Process
+
+1. **Make changes** in `hub/prod/` or `hub/uat/`
+2. **Create PR** → Plan runs and posts comment
+3. **Merge PR** → Workflow triggers automatically
+4. **Approve** in Actions tab → Apply runs
+
+**Smart Triggers:** Only affected environment runs!
+- Change in `hub/prod/` → Only prod workflow runs
+- Change in `hub/uat/` → Only uat workflow runs
+- Change in `hub/module/` → Both workflows run
 
 ## Local Development
 
