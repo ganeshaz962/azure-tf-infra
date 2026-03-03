@@ -44,13 +44,17 @@ git push origin feature/add-storage-account
 
 ### 7. Deployment Approval (Second Approval)
 After merge:
-- Workflow runs on main branch
-- Terraform Plan executes
-- Workflow pauses at "Approval Required" job
+- Main workflow ([deploy.yml](.github/workflows/deploy.yml)) triggers
+- Calls reusable workflow for each environment
+- Terraform Plan executes for both prod and uat
+- Workflow pauses at `prod` and `uat` environments
 - Go to **Actions** tab → Select the workflow run
-- Click **Review deployments** button
-- **Approve** to proceed (Second approval gate)
-- Terraform Apply runs and creates resources
+- Click **Review deployments** button (yellow banner at top)
+- Select environments to approve (prod, uat, or both)
+- Click **Approve and deploy** (Second approval gate)
+- Terraform Apply runs for approved environments
+
+**Note:** You can approve UAT and prod separately if needed.
 
 ## Branch Protection (Recommended)
 
@@ -61,14 +65,34 @@ Configure in **Settings → Branches → Branch protection rules** for `main`:
 3. ✅ Require status checks to pass
 4. ✅ Require branches to be up to date
 
-## Environment Setup
+## Environment Configuration
 
-Configure in **Settings → Environments**:
+### Setup Approval Environments
 
-1. Create environment named: `production`
-2. Enable **Required reviewers**
-3. Add reviewers (yourself and/or team members)
-4. Save protection rules
+**Create Production Environment:**
+1. Go to **Settings** → **Environments**
+2. Click **New environment**
+3. Name: **`prod`** (must match workflow)
+4. Under **Deployment protection rules**:
+   - ✅ Check **Required reviewers**
+   - Add production approvers (senior team members)
+   - Optionally set wait timer (e.g., 5 minutes)
+5. Click **Save protection rules**
+
+**Create UAT Environment:**
+1. Click **New environment** again
+2. Name: **`uat`**
+3. Under **Deployment protection rules**:
+   - ✅ Check **Required reviewers**
+   - Add UAT approvers (can be less restrictive)
+4. Click **Save protection rules**
+
+### Benefits of Separate Environments
+
+- **Different approvers:** Production can require senior approval
+- **Independent approvals:** Deploy to UAT without affecting prod
+- **Different rules:** Stricter wait times for production
+- **Clear audit trail:** See who approved what environment
 
 ## Best Practices
 

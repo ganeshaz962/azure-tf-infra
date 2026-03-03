@@ -13,15 +13,22 @@ Add these secrets:
 - `AZURE_SUBSCRIPTION_ID` - Azure Subscription ID
 - `AZURE_TENANT_ID` - Azure Tenant ID
 
-### 2. Setup Approval Environment
+### 2. Setup Approval Environments
 Go to **Settings** → **Environments** → **New environment**
 
-Create: `production`
-- Enable **Required reviewers**
-- Add yourself as reviewer
-- Save
+Create two environments:
 
-### 3. Enable Branch Protection
+**Environment 1: `prod`**
+- Enable **Required reviewers**
+- Add production approvers
+- Click **Save protection rules**
+
+**Environment 2: `uat`**
+- Enable **Required reviewers**
+- Add UAT approvers (can be same or different people)
+- Click **Save protection rules**
+
+### 3. Enable Branch Protection (Recommended)
 Go to **Settings** → **Branches** → **Add rule** for `main`
 
 Enable:
@@ -35,8 +42,10 @@ git checkout -b feature/test-change
 git add .
 git commit -m "Test infrastructure change"
 git push origin feature/test-change
-# Create PR on GitHub, review plan, approve & merge 
-# Then approve deployment in Actions tab
+# Create PR on GitHub
+# Review terraform plan in PR comments
+# Approve & merge PR
+# Approve deployment in Actions tab when prompted
 ```
 
 ## Structure
@@ -66,6 +75,19 @@ The following secrets must be configured in your GitHub repository:
 
 ## GitHub Actions Workflow
 
+### Architecture
+
+The workflow uses a **reusable workflow pattern** similar to enterprise setups:
+
+**Main Workflow:** [deploy.yml](.github/workflows/deploy.yml)
+- Calls the reusable workflow for each environment
+- Passes configuration and secrets
+
+**Reusable Workflow:** [reusable-terraform.yml](.github/workflows/reusable-terraform.yml)
+- Contains the terraform plan/apply logic
+- Can be reused for multiple environments
+- Handles authentication and deployment
+
 ### Workflow Diagram
 
 ```
@@ -90,8 +112,8 @@ The following secrets must be configured in your GitHub repository:
 ┌─────────────────────────────────────────────────────────────┐
 │  Main Branch Workflow                                       │
 │  ├─ Terraform Plan runs                                     │
-│  ├─ Workflow pauses                                         │
-│  └─ [APPROVAL 2] Approve deployment in Actions tab ✋       │
+│  ├─ Waits at environment: "prod" and "uat"                  │
+│  └─ [APPROVAL 2] Click "Review deployments" ✋              │
 └────────────────┬────────────────────────────────────────────┘
                  │
                  ▼
@@ -101,11 +123,12 @@ The following secrets must be configured in your GitHub repository:
 │  ├─ Creates/updates resources                               │
 │  └─ ✓ Infrastructure deployed                               │
 └─────────────────────────────────────────────────────────────┘
-```
-
-### Simple 2-Stage Approval Process
-
-**Stage 1: Pull Request Review (First Approval)**
+```via reusable workflow
+3. Workflow pauses at `requires_approval` environment
+4. Go to **Actions** tab → Click on the workflow run
+5. Click **Review deployments** button
+6. **Select environment and approve** - Second approval checkpoint ✋
+7*Stage 1: Pull Request Review (First Approval)**
 1. Create a PR with your infrastructure changes
 2. Terraform Plan runs automatically
 3. Plan output is posted as a comment on the PR
@@ -114,30 +137,42 @@ The following secrets must be configured in your GitHub repository:
 
 **Stage 2: Deployment Approval (Second Approval)**
 1. After PR is merged to main
-2. Terraform Plan runs again on main branch
-3. Workflow pauses and waits for deployment approval
-4. **Approve the workflow run** in GitHub Actions - Second approval checkpoint ✋
-5. Terraform Apply runs and creates/updates resources
+2. Terraform Plan runs via reusable workflow
+3. Workflow pauses at `prod` and `uat` environments
+4. Go to **Actions** tab → Click on the workflow run
+5. Click **Review deployments** button
+6. **Select environments and approve** - Second approval checkpoint ✋
+7. Terraform Apply runs and creates/updates resources
 
-### Workflow Features
-- ✅ Azure authentication using service principal secrets
-- ✅ Runs for both prod and uat environments
+### **Reusable workflow pattern** (enterprise-grade)
+- ✅ Azure authentication using service principal
+- ✅ Runs for both prod and uat environments in parallel
 - ✅ PR comments show terraform plan output
-- ✅ Two approval gates: PR review + deployment approval
-- ✅ Manual trigger available via workflow_dispatch
+- ✅ **Environment-based approval gate** before apply
+- ✅ Manual trigger with apply option
+- ✅ Plan artifacts saved for review
 
-## Setup Deployment Approval
+## How Deployment Approval Works
+**separate GitHub Environments** for each deployment:
 
-**Configure the `production` environment in GitHub:**
+1. **Environment Names:** `prod` and `uat`
+2. **Trigger:** Automatic when merging to main or manual dispatch
+3. **Approval Process:**
+   - Workflow pauses before terraform apply for each environment
+   - Configured reviewers get notified
+   - Go to Actions tab → Click workflow run → "Review deployments"
+   - Select which environments to approve (prod, uat, or both)
+   - Click "Approve and deploy" button
+   - Terraform apply proceeds for approved environments
 
-1. Go to **Settings** → **Environments**
-2. Click **New environment** → name it `production`
-3. Under **Deployment protection rules**:
-   - ✅ Enable **Required reviewers**
-   - Add yourself or team members as reviewers
-4. Click **Save protection rules**
+**Benefits:**
+- ✅ Separate approvers for production vs UAT
+- ✅ Can approve UAT without approving production
+- ✅ Different protection rules per environment
+- ✅ Environment-specific deployment logs
 
-Now the workflow will wait for your approval before running terraform apply!
+**Configure reviewers:** Go to Settings → Environments → Select `prod` or `uat` → Add reviewers
+**Update approvers:** Edit [terraform.yml](.github/workflows/terraform.yml) line with `approvers:` and add your GitHub username(s) separated by commas.
 
 ## Local Development
 

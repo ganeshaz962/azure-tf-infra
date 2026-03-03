@@ -1,0 +1,46 @@
+name: Deploy Infrastructure
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Apply changes (true/false)'
+        required: true
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
+
+jobs:
+  deploy-hub-prod:
+    name: Hub Production
+    uses: ./.github/workflows/reusable-terraform.yml
+    with:
+      name: "hub-prod"
+      environment: "prod"
+      terraform_folder: hub/prod
+      apply: ${{ (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event.inputs.apply == 'true') }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+  deploy-hub-uat:
+    name: Hub UAT
+    uses: ./.github/workflows/reusable-terraform.yml
+    with:
+      name: "hub-uat"
+      environment: "uat"
+      terraform_folder: hub/uat
+      apply: ${{ (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event.inputs.apply == 'true') }}
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
