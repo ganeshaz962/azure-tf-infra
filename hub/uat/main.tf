@@ -15,7 +15,7 @@ module "resource_group" {
   source = "../module/resource-group"
 
   resource_group_name = "rg-hub-uat"
-  location            = "eastus"
+  location            = "Central India"
   
   tags = {
     Environment = "UAT"
