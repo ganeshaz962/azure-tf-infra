@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [prod, uat]
+        environment: [prod]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -68,7 +68,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
       matrix:
-        environment: [prod, uat]
+        environment: [prod]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -120,7 +120,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
-        environment: [uat]  # Only destroy UAT by default, require manual approval for prod
+        environment: [prod]  # Requires manual approval via workflow_dispatch
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
