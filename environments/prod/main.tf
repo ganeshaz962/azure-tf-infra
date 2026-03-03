@@ -1,10 +1,5 @@
 terraform {
-  backend "azurerm" {
-    resource_group_name  = var.tfstate_rg_name
-    storage_account_name = var.tfstate_sa_name
-    container_name       = var.tfstate_container_name
-    key                  = "prod.terraform.tfstate"
-  }
+  backend "azurerm" {}
 }
 
 module "resource_group" {
