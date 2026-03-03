@@ -16,7 +16,7 @@ module "resource_group" {
 
   resource_group_name = "rg-hub-uat"
   location            = "Central India"
-  
+
   tags = {
     Environment = "UAT"
     ManagedBy   = "Terraform"

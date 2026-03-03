@@ -16,7 +16,7 @@ module "resource_group" {
 
   resource_group_name = "rg-hub-prod"
   location            = "Central India"
-  
+
   tags = {
     Environment = "Production"
     ManagedBy   = "Terraform"
