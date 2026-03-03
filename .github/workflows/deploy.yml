@@ -170,16 +170,7 @@ jobs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: ${{ inputs.terraform_version }}
-Completion Message
-      run: |
-        if [ "${{ inputs.terraform_destroy }}" == "true" ]; then
-          echo "🗑️ Resources destroyed successfully"
-        else
-          echo "✅ Resources deployed successfully"
-        fi
 
-    - name: Terraform Output
-      if: ${{ ! inputs.terraform_destroy }}
     - name: Terraform Apply
       run: terraform apply -input=false -auto-approve "terraform.plan"
       working-directory: ${{ inputs.terraform_folder }}
