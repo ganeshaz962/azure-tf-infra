@@ -10,7 +10,7 @@ output "app_gateway_name" {
 
 output "backend_address_pool_id" {
   description = "ID of the backend address pool"
-  value       = azurerm_application_gateway.app_gateway.backend_address_pool[0].id
+  value       = one(azurerm_application_gateway.app_gateway.backend_address_pool[*].id)
 }
 
 output "public_ip_address" {
