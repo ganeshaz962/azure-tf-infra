@@ -13,6 +13,7 @@ module "storage_account" {
   name                = var.sa_name
   resource_group_name = module.resource_group.name
   location            = var.location
+  depends_on          = [module.resource_group]
 }
 
 module "vnet" {
