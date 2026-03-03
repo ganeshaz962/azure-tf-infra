@@ -22,7 +22,6 @@ jobs:
     name: Terraform Plan
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
       contents: read
     strategy:
       matrix:
@@ -40,6 +39,7 @@ jobs:
         uses: azure/login@v1
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
@@ -72,7 +72,6 @@ jobs:
     needs: terraform-plan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
-      id-token: write
       contents: read
     strategy:
       matrix:
@@ -90,6 +89,7 @@ jobs:
         uses: azure/login@v1
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
@@ -129,7 +129,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
     permissions:
-      id-token: write
       contents: read
     strategy:
       matrix:
@@ -147,6 +146,7 @@ jobs:
         uses: azure/login@v1
         with:
           client-id: ${{ env.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
           subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
