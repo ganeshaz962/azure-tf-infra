@@ -11,12 +11,10 @@ on:
   push:
     paths:
       - 'hub/uat/**'
-      - 'hub/module/**'
   pull_request:
     branches: [main]
     paths:
       - 'hub/uat/**'
-      - 'hub/module/**'
 
 permissions:
   contents: read
