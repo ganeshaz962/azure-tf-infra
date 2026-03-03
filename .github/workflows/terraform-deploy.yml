@@ -1,13 +1,6 @@
-name: Terraform Deploy
+name: Terraform Deploy - Production
 
 on:
-  workflow_dispatch:
-    inputs:
-      apply:
-        type: boolean
-        description: Should terraform apply also run?
-        required: false
-        default: false
   push:
     branches:
       - main
@@ -20,19 +13,20 @@ on:
     paths:
       - 'hub/prod/**'
       - 'hub/modules/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   TERRAFORM_VERSION: 1.5.0
   TERRAFORM_FOLDER: hub/prod
-  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
+    environment: terraform-plan
     permissions:
       contents: read
     steps:
@@ -48,10 +42,10 @@ jobs:
         uses: azure/login@v1
         with:
           auth-type: SERVICE_PRINCIPAL
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          client-secret: ${{ env.AZURE_CLIENT_SECRET }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Initialize Terraform
         working-directory: ./${{ env.TERRAFORM_FOLDER }}
@@ -72,7 +66,7 @@ jobs:
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan-${{ env.TERRAFORM_FOLDER }}
+          name: tfplan-prod
           path: ./${{ env.TERRAFORM_FOLDER }}/tfplan
           retention-days: 5
 
@@ -80,7 +74,8 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     needs: terraform-plan
-    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || (github.event.inputs.apply == 'true')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: terraform-apply
     permissions:
       contents: read
     steps:
@@ -96,15 +91,15 @@ jobs:
         uses: azure/login@v1
         with:
           auth-type: SERVICE_PRINCIPAL
-          client-id: ${{ env.AZURE_CLIENT_ID }}
-          client-secret: ${{ env.AZURE_CLIENT_SECRET }}
-          tenant-id: ${{ env.AZURE_TENANT_ID }}
-          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ env.TERRAFORM_FOLDER }}
+          name: tfplan-prod
           path: ./${{ env.TERRAFORM_FOLDER }}
 
       - name: Initialize Terraform
@@ -125,8 +120,7 @@ jobs:
 
       - name: Create Deployment Summary
         run: |
-          echo "## Terraform Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Folder:** ${{ env.TERRAFORM_FOLDER }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Terraform Deployment Summary - Production" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Resources Deployed:" >> $GITHUB_STEP_SUMMARY
           echo "- **Virtual Network ID:** ${{ steps.tf_outputs.outputs.vnet_id }}" >> $GITHUB_STEP_SUMMARY
