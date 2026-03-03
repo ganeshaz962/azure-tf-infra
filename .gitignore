@@ -1,0 +1,21 @@
+# Terraform files and directories
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+*.tfstate
+*.tfstate.*
+.tfvars
+.tfvars.json
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store

@@ -10,7 +10,7 @@ variable "rg_name" {
 
 variable "sa_name" {
   type    = string
-  default = "prodsa12345"
+  default = "tfazinfrastr"
 }
 
 variable "vnet_name" {
