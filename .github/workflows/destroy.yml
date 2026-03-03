@@ -1,4 +1,4 @@
-name: Terraform Destroy (Manual)
+name: Terraform Destroy
 
 on:
   workflow_dispatch:
@@ -15,36 +15,22 @@ on:
         required: true
         type: string
 
-env:
-  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+permissions:
+  contents: read
 
 jobs:
-  terraform-destroy:
-    name: Destroy ${{ github.event.inputs.environment }}
-    runs-on: ubuntu-latest
+  destroy-infrastructure:
+    name: Destroy - ${{ github.event.inputs.environment }}
     if: github.event.inputs.confirmation == 'DESTROY'
-    environment:
-      name: destroy-${{ github.event.inputs.environment }}
-    
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.0
-
-      - name: Terraform Init
-        working-directory: ./hub/${{ github.event.inputs.environment }}
-        run: terraform init
-
-      - name: Terraform Destroy
-        working-directory: ./hub/${{ github.event.inputs.environment }}
-        run: terraform destroy -auto-approve
-
-      - name: Completion
-        run: echo "✅ Infrastructure destroyed for ${{ github.event.inputs.environment }} environment"
+    uses: ./.github/workflows/deploy.yml
+    with:
+      name: "hub-${{ github.event.inputs.environment }}-destroy"
+      environment: "${{ github.event.inputs.environment }}"
+      terraform_folder: hub/${{ github.event.inputs.environment }}
+      apply: true
+      terraform_destroy: true
+    secrets:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
