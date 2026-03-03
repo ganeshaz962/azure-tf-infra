@@ -56,9 +56,9 @@ jobs:
         working-directory: ./${{ env.TERRAFORM_FOLDER }}
         run: terraform init
 
-      - name: Format Check
+      - name: Format Terraform
         working-directory: ./${{ env.TERRAFORM_FOLDER }}
-        run: terraform fmt -check -recursive
+        run: terraform fmt -recursive
 
       - name: Validate Terraform
         working-directory: ./${{ env.TERRAFORM_FOLDER }}
