@@ -21,5 +21,6 @@ module "resource_group" {
     Environment = "Production"
     ManagedBy   = "Terraform"
     Project     = "Hub"
+    Name = "Ganesh"
   }
 }
