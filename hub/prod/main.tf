@@ -1,8 +1,6 @@
-resource "azurerm_resource_group" "rg" {
-  name     = var.resource_group_name
-  location = var.location
-
-  tags = var.tags
+# Reference existing resource group instead of creating it
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
 }
 
 # Virtual Network Module
@@ -12,7 +10,7 @@ module "vnet" {
   vnet_name               = var.vnet_name
   address_space           = var.vnet_address_space
   location                = var.location
-  resource_group_name     = azurerm_resource_group.rg.name
+  resource_group_name     = data.azurerm_resource_group.rg.name
   subnet_name             = var.subnet_name
   subnet_address_prefixes = var.subnet_address_prefixes
   nsg_name                = var.nsg_name
@@ -27,7 +25,7 @@ module "app_gateway" {
   app_gateway_name      = var.app_gateway_name
   app_gateway_pip_name  = var.app_gateway_pip_name
   location              = var.location
-  resource_group_name   = azurerm_resource_group.rg.name
+  resource_group_name   = data.azurerm_resource_group.rg.name
   subnet_id             = module.vnet.subnet_id
   sku_name              = var.app_gateway_sku_name
   sku_tier              = var.app_gateway_sku_tier
@@ -43,7 +41,7 @@ module "windows_vm" {
   vm_name             = var.vm_name
   nic_name            = var.nic_name
   location            = var.location
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
   subnet_id           = module.vnet.subnet_id
   vm_size             = var.vm_size
   admin_username      = var.admin_username
