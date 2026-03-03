@@ -38,6 +38,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ env.AZURE_CLIENT_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
@@ -88,6 +89,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ env.AZURE_CLIENT_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
@@ -145,6 +147,7 @@ jobs:
       - name: Azure Login
         uses: azure/login@v1
         with:
+          auth-type: SERVICE_PRINCIPAL
           client-id: ${{ env.AZURE_CLIENT_ID }}
           client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
           tenant-id: ${{ env.AZURE_TENANT_ID }}
