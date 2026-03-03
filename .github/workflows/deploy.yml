@@ -71,6 +71,7 @@ jobs:
       continue-on-error: true
 
     - name: Terraform Validate
+      if: ${{ ! inputs.terraform_destroy }}
       run: terraform validate
 
     - name: Terraform Plan
@@ -79,7 +80,10 @@ jobs:
 
     - name: Terraform Destroy Plan
       if: ${{ inputs.terraform_destroy }}
-      run: terraform plan -destroy -input=false -out "terraform.plan" -no-color | tee plan.txt
+      run: |
+        echo "🗑️ Creating destroy plan..."
+        terraform plan -destroy -input=false -out "terraform.plan" -no-color | tee plan.txt
+        echo "⚠️ WARNING: This will DESTROY all resources!"
 
     - name: Show Terraform Plan
       run: terraform show terraform.plan
@@ -138,7 +142,12 @@ jobs:
     environment: ${{ inputs.environment }}
     runs-on: ${{ inputs.runs_on }}
     steps:
-      - run: echo "✅ Plan was approved for ${{ inputs.environment }}"
+      - run: |
+          if [ "${{ inputs.terraform_destroy }}" == "true" ]; then
+            echo "⚠️ DESTROY operation approved for ${{ inputs.environment }}"
+          else
+            echo "✅ Deploy operation approved for ${{ inputs.environment }}"
+          fi
 
   apply:
     name: Terraform Apply
@@ -161,7 +170,16 @@ jobs:
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: ${{ inputs.terraform_version }}
+Completion Message
+      run: |
+        if [ "${{ inputs.terraform_destroy }}" == "true" ]; then
+          echo "🗑️ Resources destroyed successfully"
+        else
+          echo "✅ Resources deployed successfully"
+        fi
 
+    - name: Terraform Output
+      if: ${{ ! inputs.terraform_destroy }}
     - name: Terraform Apply
       run: terraform apply -input=false -auto-approve "terraform.plan"
       working-directory: ${{ inputs.terraform_folder }}
