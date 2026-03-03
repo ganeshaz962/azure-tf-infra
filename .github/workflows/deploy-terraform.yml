@@ -1,0 +1,143 @@
+name: Deploy Terraform
+
+on:
+  workflow_call:
+    inputs:
+      terraform_folder:
+        description: 'Terraform folder to deploy (e.g., hub/prod)'
+        required: true
+        type: string
+      apply:
+        description: 'Whether to apply terraform changes'
+        required: false
+        type: boolean
+        default: false
+      environment:
+        description: 'GitHub environment for approval'
+        required: false
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        description: 'Azure Client ID'
+        required: true
+      AZURE_CLIENT_SECRET:
+        description: 'Azure Client Secret'
+        required: true
+      AZURE_TENANT_ID:
+        description: 'Azure Tenant ID'
+        required: false
+      AZURE_SUBSCRIPTION_ID:
+        description: 'Azure Subscription ID'
+        required: false
+
+env:
+  TERRAFORM_VERSION: 1.5.0
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan - ${{ inputs.terraform_folder }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          auth-type: SERVICE_PRINCIPAL
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Initialize Terraform
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: terraform init
+
+      - name: Format Check
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: terraform fmt -check -recursive
+
+      - name: Validate Terraform
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: terraform validate
+
+      - name: Plan Terraform
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: terraform plan -out=tfplan
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ inputs.terraform_folder }}
+          path: ./${{ inputs.terraform_folder }}/tfplan
+          retention-days: 5
+
+  terraform-apply:
+    name: Terraform Apply - ${{ inputs.terraform_folder }}
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: inputs.apply == true
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          auth-type: SERVICE_PRINCIPAL
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          client-secret: ${{ env.AZURE_CLIENT_SECRET }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.terraform_folder }}
+          path: ./${{ inputs.terraform_folder }}
+
+      - name: Initialize Terraform
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: terraform init
+
+      - name: Apply Terraform
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get Terraform Outputs
+        id: tf_outputs
+        working-directory: ./${{ inputs.terraform_folder }}
+        run: |
+          echo "vnet_id=$(terraform output -raw vnet_id)" >> $GITHUB_OUTPUT
+          echo "app_gateway_ip=$(terraform output -raw app_gateway_public_ip)" >> $GITHUB_OUTPUT
+          echo "vm_name=$(terraform output -raw vm_name)" >> $GITHUB_OUTPUT
+
+      - name: Create Deployment Summary
+        run: |
+          echo "## Terraform Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Folder:** ${{ inputs.terraform_folder }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Resources Deployed:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Virtual Network ID:** ${{ steps.tf_outputs.outputs.vnet_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Application Gateway IP:** ${{ steps.tf_outputs.outputs.app_gateway_ip }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Windows VM Name:** ${{ steps.tf_outputs.outputs.vm_name }}" >> $GITHUB_STEP_SUMMARY
