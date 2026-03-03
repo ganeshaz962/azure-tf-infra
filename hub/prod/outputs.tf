@@ -28,8 +28,3 @@ output "subnet_ids" {
   value       = module.virtual_network.subnet_ids
 }
 
-output "nsg_ids" {
-  description = "Map of NSG names to IDs"
-  value       = module.virtual_network.nsg_ids
-}
-

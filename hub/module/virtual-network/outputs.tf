@@ -22,8 +22,3 @@ output "subnet_names" {
   description = "List of subnet names"
   value       = [for subnet in azurerm_subnet.subnets : subnet.name]
 }
-
-output "nsg_ids" {
-  description = "Map of NSG names to IDs"
-  value       = { for k, v in azurerm_network_security_group.nsg : k => v.id }
-}

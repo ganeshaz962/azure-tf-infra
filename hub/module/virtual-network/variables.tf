@@ -27,10 +27,8 @@ variable "dns_servers" {
 variable "subnets" {
   description = "List of subnets to create"
   type = list(object({
-    name               = string
-    address_prefixes   = list(string)
-    service_endpoints  = optional(list(string), [])
-    create_nsg         = optional(bool, true)
+    name             = string
+    address_prefixes = list(string)
   }))
   default = []
 }

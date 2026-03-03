@@ -38,34 +38,18 @@ module "virtual_network" {
     {
       name             = "subnet-app"
       address_prefixes = ["10.0.1.0/24"]
-      service_endpoints = [
-        "Microsoft.Storage",
-        "Microsoft.Sql"
-      ]
-      create_nsg = true
     },
     {
       name             = "subnet-data"
       address_prefixes = ["10.0.2.0/24"]
-      service_endpoints = [
-        "Microsoft.Storage",
-        "Microsoft.Sql"
-      ]
-      create_nsg = true
     },
     {
       name             = "subnet-web"
       address_prefixes = ["10.0.3.0/24"]
-      service_endpoints = [
-        "Microsoft.Storage"
-      ]
-      create_nsg = true
     },
     {
       name             = "AzureBastionSubnet"
       address_prefixes = ["10.0.4.0/26"]
-      service_endpoints = []
-      create_nsg       = false
     }
   ]
 
