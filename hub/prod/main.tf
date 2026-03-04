@@ -64,7 +64,7 @@ module "virtual_network" {
 module "storage_account" {
   source = "../module/storage-account"
 
-  storage_account_name     = "sthubprod001"
+  storage_account_name     = "tfazinfrastatstr"
   resource_group_name      = module.resource_group.resource_group_name
   location                 = "Central India"
   account_tier             = "Standard"
@@ -74,7 +74,7 @@ module "storage_account" {
 
   containers = [
     {
-      name        = "data"
+      name        = "state"
       access_type = "private"
     },
     {
