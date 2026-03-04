@@ -47,6 +47,10 @@ module "virtual_network" {
       name             = "subnet-web"
       address_prefixes = ["10.0.3.0/24"]
     },
+    {
+      name             = "AzureBastionSubnet"
+      address_prefixes = ["10.0.4.0/26"]
+    }
   ]
 
   tags = {
