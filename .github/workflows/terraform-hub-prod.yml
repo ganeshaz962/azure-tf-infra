@@ -9,6 +9,7 @@ on:
         required: false
         default: false
   push:
+    branches: [main]
     paths:
       - 'hub/prod/**'
   pull_request:
