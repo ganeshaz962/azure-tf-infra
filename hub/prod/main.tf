@@ -60,3 +60,38 @@ module "virtual_network" {
     Name        = "Ganesh"
   }
 }
+
+module "storage_account" {
+  source = "../module/storage-account"
+
+  storage_account_name     = "sthubprod001"
+  resource_group_name      = module.resource_group.resource_group_name
+  location                 = "Central India"
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  account_kind             = "StorageV2"
+  access_tier              = "Hot"
+
+  containers = [
+    {
+      name        = "data"
+      access_type = "private"
+    },
+    {
+      name        = "logs"
+      access_type = "private"
+    },
+    {
+      name        = "backups"
+      access_type = "private"
+    }
+  ]
+
+  tags = {
+    Environment = "Production"
+    ManagedBy   = "Terraform"
+    Project     = "Hub"
+    Name        = "Ganesh"
+  }
+}
+
