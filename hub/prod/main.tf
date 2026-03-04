@@ -39,10 +39,7 @@ module "virtual_network" {
       name             = "subnet-app"
       address_prefixes = ["10.0.1.0/24"]
     },
-    {
-      name             = "subnet-data"
-      address_prefixes = ["10.0.2.0/24"]
-    }
+
   ]
 
   tags = {
@@ -73,10 +70,7 @@ module "storage_account" {
       name        = "logs"
       access_type = "private"
     },
-    {
-      name        = "backups"
-      access_type = "private"
-    }
+
   ]
 
   tags = {
