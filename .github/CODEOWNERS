@@ -1,0 +1,9 @@
+# CODEOWNERS — automatically requests review from these users on every PR
+# Replace @ganeshaz962 with your GitHub username or team (e.g. @your-org/infra-team)
+
+# All Terraform files require review
+*.tf                    @ganeshaz962
+*.tfvars                @ganeshaz962
+
+# Workflow changes require review
+.github/workflows/      @ganeshaz962
