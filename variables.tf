@@ -44,6 +44,7 @@ variable "vm_admin_password" {
   description = "Admin password for the VM (must satisfy Azure complexity requirements)"
   type        = string
   sensitive   = true
+  default = "Photon@12345"
 }
 
 variable "tags" {
