@@ -116,3 +116,25 @@ jobs:
       - name: Fail if plan failed
         if: steps.plan.outcome == 'failure'
         run: exit 1
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 2: Review gate
+  # Pauses the workflow and waits for a human to review the plan
+  # output posted above and approve via the GitHub Actions UI.
+  #
+  # Setup required in GitHub portal:
+  #   Settings → Environments → New environment → "pr-review"
+  #   → Required reviewers → add yourself / your team
+  #
+  # Then in branch protection for main:
+  #   Require status checks → add "Terraform Plan Review Approved"
+  # ─────────────────────────────────────────────────────────────
+  review-gate:
+    name: Terraform Plan Review Approved
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    environment: pr-review        # ← configure required reviewers here
+
+    steps:
+      - name: Plan reviewed and approved
+        run: echo "Terraform plan has been reviewed and approved. PR is ready to merge."

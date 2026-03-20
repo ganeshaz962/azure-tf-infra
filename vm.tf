@@ -12,7 +12,7 @@ resource "azurerm_network_interface" "vm_nic" {
   ip_configuration {
     name                          = "internal"
     subnet_id                     = azurerm_subnet.vm_subnet.id
-    private_ip_address_allocation = "Static"
+    private_ip_address_allocation = "dynamic"
     private_ip_address            = cidrhost(var.vm_subnet_prefix, 4)
   }
 }
