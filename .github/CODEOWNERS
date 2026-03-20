@@ -6,4 +6,4 @@
 *.tfvars                @ganeshaz962
 
 # Workflow changes require review
-.github/workflows/      @ganeshaz962/azure-tf-infra
+.github/workflows/      @ganeshaz962
