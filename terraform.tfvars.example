@@ -1,0 +1,17 @@
+# Copy this file to terraform.tfvars and fill in the values before running.
+
+location            = "East US"
+resource_group_name = "rg-appgw-demo"
+
+vnet_address_space  = ["10.0.0.0/16"]
+appgw_subnet_prefix = "10.0.1.0/24"
+vm_subnet_prefix    = "10.0.2.0/24"
+
+vm_size           = "Standard_B2s"
+vm_admin_username = "azureuser"
+vm_admin_password = "ReplaceMe@12345!"   # Must be 12+ chars, upper, lower, digit, special
+
+tags = {
+  environment = "demo"
+  managed_by  = "terraform"
+}
