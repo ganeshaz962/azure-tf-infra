@@ -201,12 +201,14 @@ resource "azurerm_application_gateway" "appgw" {
     name                               = "url-path-map"
     default_backend_address_pool_name  = "pool-app1"
     default_backend_http_settings_name = "settings-app1"
+    default_rewrite_rule_set_name      = "rewrite-security-headers"
 
     path_rule {
       name                       = "rule-app1"
       paths                      = ["/app1/*"]
       backend_address_pool_name  = "pool-app1"
       backend_http_settings_name = "settings-app1"
+      rewrite_rule_set_name      = "rewrite-security-headers"
     }
 
     path_rule {
@@ -214,6 +216,7 @@ resource "azurerm_application_gateway" "appgw" {
       paths                      = ["/app2/*"]
       backend_address_pool_name  = "pool-app2"
       backend_http_settings_name = "settings-app2"
+      rewrite_rule_set_name      = "rewrite-security-headers"
     }
 
     path_rule {
@@ -221,6 +224,7 @@ resource "azurerm_application_gateway" "appgw" {
       paths                      = ["/app3/*"]
       backend_address_pool_name  = "pool-app3"
       backend_http_settings_name = "settings-app3"
+      rewrite_rule_set_name      = "rewrite-security-headers"
     }
 
     path_rule {
@@ -228,6 +232,7 @@ resource "azurerm_application_gateway" "appgw" {
       paths                      = ["/app4/*"]
       backend_address_pool_name  = "pool-app4"
       backend_http_settings_name = "settings-app4"
+      rewrite_rule_set_name      = "rewrite-security-headers"
     }
 
     path_rule {
@@ -235,6 +240,55 @@ resource "azurerm_application_gateway" "appgw" {
       paths                      = ["/app5/*"]
       backend_address_pool_name  = "pool-app5"
       backend_http_settings_name = "settings-app5"
+      rewrite_rule_set_name      = "rewrite-security-headers"
+    }
+  }
+
+  #------------------------------------------------------------
+  # Rewrite Rule Set – applied to all paths
+  # - Strips Server and X-Powered-By response headers (security)
+  # - Adds X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+  # - Forwards original client IP via X-Forwarded-For request header
+  #------------------------------------------------------------
+  rewrite_rule_set {
+    name = "rewrite-security-headers"
+
+    rewrite_rule {
+      name          = "security-headers"
+      rule_sequence = 100
+
+      # Strip headers that reveal server internals
+      response_header_configuration {
+        header_name  = "Server"
+        header_value = ""
+      }
+
+      response_header_configuration {
+        header_name  = "X-Powered-By"
+        header_value = ""
+      }
+
+      # Add security response headers
+      response_header_configuration {
+        header_name  = "X-Content-Type-Options"
+        header_value = "nosniff"
+      }
+
+      response_header_configuration {
+        header_name  = "X-Frame-Options"
+        header_value = "DENY"
+      }
+
+      response_header_configuration {
+        header_name  = "X-XSS-Protection"
+        header_value = "1; mode=block"
+      }
+
+      # Forward the original client IP to the backend
+      request_header_configuration {
+        header_name  = "X-Forwarded-For"
+        header_value = "{var_add_x_forwarded_for_proxy}"
+      }
     }
   }
 
