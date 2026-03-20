@@ -101,7 +101,7 @@ resource "azurerm_application_gateway" "appgw" {
       status_code = ["200-399"]
     }
   }
-  
+
   #------------------------------------------------------------
   # Backend Address Pools – one per application
   # All pools point to the same VM. Kept separate so that
